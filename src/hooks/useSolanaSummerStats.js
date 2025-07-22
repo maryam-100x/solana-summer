@@ -13,7 +13,8 @@ export function useSolanaSummerStats() {
     const fetchStats = async () => {
       try {
         // Token stats
-const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/bitquery?mint=${MINT}`);
+// const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/bitquery?mint=${MINT}`);
+const res = await fetch(`/api/bitquery?mint=${MINT}`);
         const json = await res.json();
 
         // Holders via Helius RPC
