@@ -1,4 +1,3 @@
-// src/hooks/useSolanaSummerStats.js
 import { useState, useEffect } from "react";
 
 const MINT = import.meta.env.VITE_SUMMER_MINT;
@@ -10,30 +9,43 @@ export function useSolanaSummerStats() {
   useEffect(() => {
     if (!MINT) return;
 
-    const fetchStats = async () => {
-      try {
-        // Token stats
-// const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/bitquery?mint=${MINT}`);
-const res = await fetch(`/api/bitquery?mint=${MINT}`);
-        const json = await res.json();
+    const fetchHolderCount = async () => {
+      const allOwners = new Set();
+      let cursor = undefined;
 
-        // Holders via Helius RPC
-        const helius = await fetch(import.meta.env.VITE_HELIUS_RPC, {
+      while (true) {
+        const params = { mint: MINT, limit: 1000 };
+        if (cursor) params.cursor = cursor;
+
+        const heliusRes = await fetch(import.meta.env.VITE_HELIUS_RPC, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             jsonrpc: "2.0",
             id: "get-holders",
             method: "getTokenAccounts",
-            params: {
-              mint: MINT,
-              limit: 1000,
-            },
+            params,
           }),
         });
 
-        const data = await helius.json();
-        const holders = new Set(data?.result?.token_accounts?.map(a => a.owner)).size || 0;
+        const json = await heliusRes.json();
+        const accounts = json?.result?.token_accounts || [];
+
+        accounts.forEach((acc) => allOwners.add(acc.owner));
+
+        cursor = json?.result?.cursor;
+        if (!cursor) break;
+      }
+
+      return allOwners.size;
+    };
+
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`/api/bitquery?mint=${MINT}`);
+        const json = await res.json();
+
+        const holders = await fetchHolderCount();
 
         setStats({
           marketCap: json.marketCap || 0,
